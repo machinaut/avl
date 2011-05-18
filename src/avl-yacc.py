@@ -44,34 +44,57 @@ def p_craft(p):
     p[0] = p[2] + [p[3]]
 
 def p_surface_component(p):
-  '''surface  : surface component'''
+  '''surface  : surface spacing COMPONENT spacing INT
+              | surface spacing INDEX     spacing INT'''
+  p[0] = p[1]
+  p[0].component = p[5]
 
 def p_surface_yduplicate(p):
-  '''surface  : surface yduplicate'''
+  '''surface  : surface spacing YDUPLICATE spacing FLOAT'''
+  p[0] = p[1]
+  p[0].yduplicate = p[5]
 
 def p_surface_scale(p):
-  '''surface  : surface scale'''
+  '''surface  : surface spacing SCALE spacing trio'''
+  p[0] = p[1]
+  p[0].scale = p[5]
 
 def p_surface_translate(p):
-  '''surface  : surface translate'''
+  '''surface  : surface spacing TRANSLATE spacing trio'''
+  p[0] = p[1]
+  p[0].translate = p[5]
 
 def p_surface_angle(p):
-  '''surface  : surface angle'''
+  '''surface  : surface spacing ANGLE spacing FLOAT'''
+  p[0] = p[1]
+  p[0].angle = p[5]
 
 def p_surface_nowake(p):
-  '''surface  : surface nowake'''
+  '''surface  : surface spacing NOWAKE'''
+  p[0] = p[1]
+  p[0].nowake = True
 
 def p_surface_noalbe(p):
-  '''surface  : surface noalbe'''
+  '''surface  : surface spacing NOALBE'''
+  p[0] = p[1]
+  p[0].noalbe = True
 
 def p_surface_noload(p):
-  '''surface  : surface noload'''
+  '''surface  : surface spacing NOLOAD'''
+  p[0] = p[1]
+  p[0].noload = True
 
 def p_surface_section(p):
   '''surface  : surface section'''
 
 def p_surface(p):
   '''surface  : spacing SURFACE spacing LINE surfacedata'''
+  p[0] = Surface(p[2])
+  p[0].name = p[4]
+  p[0].nchord = p[5][0]
+  p[0].cspace = p[5][1]
+  p[0].nspan  = p[5][2]
+  p[0].sspace = p[5][3]
 
 def p_surfacedata(p):
   '''surfacedata  : spacing INT SPACE FLOAT SPACE INT SPACE FLOAT

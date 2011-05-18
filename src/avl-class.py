@@ -90,6 +90,15 @@ class Surface:
     self.cspace   = 0.0     # Cspace
     self.nspan    = None    # Nspan  [optional]
     self.sspace   = None    # Sspace [optional]
+    self.component = None
+    self.yduplicate = None
+    self.scale    = None
+    self.translate = None
+    self.angle = None
+    self.nowake = False
+    self.noalbe = False
+    self.noload = False
+    self.section = []
   def __str__(self):
     return 'Surface: ' + self.name
 
