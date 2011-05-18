@@ -18,23 +18,33 @@ header = re.compile(r"""(?sx)         # re.VERBOSE and re.DOTALL
   """)
 surface = re.compile(r"""(?sx)        # re.VERBOSE and re.DOTALL
   (?P<surf>SURF\S*)               \s+ # keyword SURFACE
-  (?P<title>[^\n]*)               \s+ # surface title
+  (?P<name>[^\n]*)                \s+ # surface name
   (?P<params>\S+[ \t]+\S+([ \t]+\S+[ \t]+\S+)?) \s*  # surface parameters
               # Nchord  Cspace [ Nspan Sspace ]
   (?P<remainder>.*)                   # Remainder
   """)
+body = re.compile(r"""(?sx)           # re.VERBOSE and re.DOTALL
+  (?P<body>BODY\S*)               \s+ # keyword BODY
+  (?P<name>
+  """ ) # XXX not done yet
 
 class Plane:
-  """ Plane is a flight configuration (airplane) in AVL """
   def __init__(self):
     title = ''
 #    title, mach,  cdp   = None, None, None
 #    iysym, izsym, zsym  = None, None, None
 #    sref,  cref,  bref  = None, None, None
 #    xref,  yref,  zref  = None, None, None # TODO combine to one reference point
-    ysym = 0.0
+    self.ysym = 0.0
+    self.surface = [] # surfaces
   def __str__(self):
     return self.title
+
+class Surface:
+  def __init__(self):
+    components = 0
+  def __str__(self):
+    return self.name
 
 if __name__ == "__main__":
   import sys
@@ -64,6 +74,7 @@ if __name__ == "__main__":
   while s != '':
     m = surface.match(s)
     if m is not None: # matched 'SURF'
+      surf = Surface()
       d = m.groupdict()
       # new surface is about to start
       if isurf != 0:
@@ -90,9 +101,19 @@ if __name__ == "__main__":
       xyzcal, xyztran = [1.0,1.0,1.0], [0.0,0.0,0.0]
       addinc, ncvar = 0.0, 0
       # XXX holy shit it takes this long to get to actual surface parsing
-      print "Building surface:", d['title']
-      if len(d['params'].split()) == 2:
-        nchord,cspace = [float(i) for i in d['params'].split()]
+      l = d['params'].split()
+      if len(d['params'].split()) == 4:
+        nchord,cspace,nspan,sspace = int(l[0]),float(l[1]),int(l[2]),float(l[3])
+      else:
+        nchord,cspace,nspan,sspace = int(l[0]),float(l[1]),0,0.0
+      # XXX - what the fuck are these, but they're in there
+      # nchord = int(float(l[0]) + 0.001)
+      # nspan = int(float(l[2]) + 0.001) if *&*& else nspan,sspace = 0,0.0
+      # TODO should move this print and parsing before the heavier computations
+      print "Building surface:", d['name']
+      surf.name = d['name']
+      surf.nchord,surf.cspace,surf.nspan,surf.sspace = nchord,cspace,nspan,sspace
+      p.surface.append(surf)
       
 
       # XXX - ended in line 262 of original ainput.f
