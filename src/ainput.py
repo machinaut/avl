@@ -18,214 +18,139 @@
 #    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #***********************************************************************
 
-def read_infile(lun,infilename,ferr): #      SUBROUTINE INPUT(LUN,FNAME,FERR)
+config = None #global flight configuration
+
+class Configuration:
+  def __init__(self,name,mach,iysym,izsym,zsym,sref,cref,bref,xref,cdp):
+    self.name   = name
+    self.mach   = mach
+    self.iysym  = iysym
+    self.izsym  = izsym
+    self.ysym   = 0.0
+    self.zsym   = zsym
+    self.sref   = sref
+    self.cref   = cref
+    self.bref   = bref
+    self.xref   = xref
+    self.cdp    = cdp
+    self.comp   = {None:[]} # None is a list of individual surfaces
+    self.body   = []
+
+class Surface:
+  def __init__(self,name,nchord,cspace,nspan=None,sspace=None):
+    self.name       = name
+    self.nchord     = nchord
+    self.cspace     = cspace
+    self.nspan      = nspan
+    self.sspace     = sspace
+    self.comp       = None
+    self.ydup       = None
+    self.scale      = [1.0, 1.0, 1.0]
+    self.trans      = [0.0, 0.0, 0.0]
+    self.angle      = 0.0
+    self.wake       = True
+    self.albe       = True
+    self.load       = True
+    self.sect       = []
+
+class Section:
+  def __init__(self,xle,chord,ainc,nspan=None,sspace=None):
+    self.xle      = xle
+    self.chord    = chord
+    self.ainc     = ainc
+    self.nspan    = nspan
+    self.sspace   = sspace
+    self.airfoil  = None
+
+class Body:
+  def __init__(self,name,nbody,bspace):
+    self.name       = name
+    self.nbody      = nbody
+    self.bspace     = bspace
+    self.ydup       = None
+    self.scale      = [1.0, 1.0, 1.0]
+    self.trans      = [0.0, 0.0, 0.0]
+    self.bfile      = None
+
+def read_infile(lun,infilename,ferr):
   """
   Reads an processes an AVL configuration input file
   """
-# XXX no import #      INCLUDE 'AVL.INC'
-#
-#      CHARACTER*(*) FNAME
-#      LOGICAL FERR
-#
-#      CHARACTER*4  KEYWD
-#      CHARACTER*80 CNAME, ANAME
-#      CHARACTER*128 LINE
-#      LOGICAL LDUPL, LHINGE
-#
-#      REAL CLX(3), CDX(3)
-#      REAL XYZSCAL(3), XYZTRAN(3)
-#
-#      PARAMETER (NWRK=NSMAX, IBX=300)
-#      REAL XYZLES(3,NWRK),CHORDS(NWRK),AINCS(NWRK),SSPACES(NWRK),
-#     &     BRADY(NWRK), BRADZ(NWRK), CLAF(NWRK)
-#      INTEGER NSPANS(NWRK), NASEC(NWRK)
-#      REAL XASEC(IBX,NWRK), SASEC(IBX,NWRK), TASEC(IBX,NWRK)
-#      REAL CLCDSEC(6,NWRK)
-#
-#      REAL XB(IBX), YB(IBX)
-#      REAL XIN(IBX), YIN(IBX), TIN(IBX)
-#      REAL XBOD(IBX), YBOD(IBX), TBOD(IBX)
-#
-#---- max number of control or design variable declaration lines per section
-#      PARAMETER (ICONX = 20)
-#
-#      INTEGER ICONTD(ICONX,NWRK),
-#     &        NSCON(NWRK),
-#     &        IDESTD(ICONX,NWRK),
-#     &        NSDES(NWRK)
-#
-#      REAL XHINGED(ICONX,NWRK), 
-#     &     VHINGED(3,ICONX,NWRK), 
-#     &     GAIND(ICONX,NWRK),
-#     &     REFLD(ICONX,NWRK),
-#     &     GAING(ICONX,NWRK)
-#
-#
-#      REAL    RINPUT(10)
-#      INTEGER IINPUT(10)
-#      LOGICAL ERROR
-#
-#----------------------------------------------------
-#     FERR = .FALSE.
-#
-  # start reading file
-  infile = open(infilename) #      OPEN(UNIT=LUN,FILE=FNAME,STATUS='OLD',ERR=3)
-  print "Reading file:", infilename #      GO TO 6
-#
- 3    CONTINUE
-      CALL STRIP(FNAME,NFN)
-      WRITE(*,*) 
-      WRITE(*,*) '** Open error on file: ', FNAME(1:NFN)
-      FNAME = FNAME(1:NFN) // '.avl'
-      WRITE(*,*) '   Trying alternative: ', FNAME(1:NFN+4)
-      OPEN(UNIT=LUN,FILE=FNAME,STATUS='OLD',ERR=4)
-      GO TO 6
-#
- 4    CONTINUE
-      CALL STRIP(FNAME,NFN)
-      WRITE(*,*) 
-      WRITE(*,*) '** Open error on file: ', FNAME(1:NFN)
-      FERR = .TRUE.
-      RETURN
-#
-#----------------------------------------------------
-#6    CONTINUE
-#     CALL STRIP(FNAME,NFN)
-#     WRITE(*,*) 
-#     WRITE(*,*) 'Reading file: ', FNAME(1:NFN), '  ...'
-#
-#     DCL_A0 = 0.
-#     DCM_A0 = 0.
-#     DCL_U0 = 0.
-#     DCM_U0 = 0.
-#
-#---- initialize all entity counters
-#     NSEC = 0
-#
-#     NSURF = 0
-#     NVOR = 0
-#     NSTRIP = 0
-#
-#     NBODY = 0
-#     NLNODE = 0
-#
-#     NCONTROL = 0
-#     NDESIGN = 0
-#
-#     LVISC  = .FALSE.
-#
-#---- initialize counters and active-entity indicators
-#     ISURF = 0
-#     IBODY = 0
-#
-#---- initialize input-file line counter
-#     ILINE = 0
-#
-#------------------------------------------------------------------------------
-#---- start reading file
-#
-#---------------------------------------------------
+  infile = open(infilename)
+  print "Reading file:", infilename
   # AJR - quick and dirty file parser
-  title = None
-  mach0 = None
-  iYsym, iZsym, Zsym = None, None, None
-  Sref, Cref, Bref = None, None, None
-  Xref, Yref, Zref = None, None, None
-  CDp = None
+  def getline(ainfile):
+    aline = ''
+    while aline == '':
+      aline = ainfile.readline()
+      if aline.find("#") >= 0 : aline = aline[:aline.find("#")]
+      if aline.find("!") >= 0 : aline = aline[:aline.find("!")]
+      aline = aline.strip()
+    return aline
+  name = getline()
+  mach = float(getline())
+  iYsym, iZsym, Zsym = [float(i) for i in getline().split()]
+  iYsym = float(cmp(iYsym,0))
+  iZsym = float(cmp(iZsym,0))
+  Sref, Cref, Bref = [float(i) for i in getline().split()]
+  if Sref < 0 : Sref = 1.0
+  if Cref < 0 : Cref = 1.0
+  if Bref < 0 : Bref = 1.0
+  Xref = [float(i) for i in getline().split()]
+  # optional CDp
+  line = getline()
+  try: CDp = float(line)
+  except ValueError: CDp = 0.0; line = getline()
+  global config # flight configuration
+  config = Configuration(name,mach,iYsym,iZsym,Zsym,Sref,Cref,Bref,Xref,CDp)
+  # loop, parsing 'surfaces' and 'bodies'
   while(True): # you spin me right round baby right round
-    line = infile.readline()
-    if line.find("#") >= 0 : line = line[:line.find("#")]
-    if line.find("!") >= 0 : line = line[:line.find("!")]
-    line = line.strip()
-    if line == "" : continue
-    if title is None:
-      title = line
-      print "Configuration:", title
-      continue
-    if mach0 is None:
-      mach0 = float(line)
-      continue
-    if iYsym is None:
-      iYsym, iZsym, Zsym = [float(i) for i in line.split()]
-      # y-symmetry plane hard-wired at y=0
-      Ysym = 0.0
-      iYsym = float(cmp(iYsym,0))
-      iZsym = float(cmp(iZsym,0))
-      continue
-    if Sref is None:
-      Sref, Cref, Bref = [float(i) for i in line.split()]
-      if Sref < 0 : Sref = 1.0
-      if Cref < 0 : Cref = 1.0
-      if Bref < 0 : Bref = 1.0
-      continue
-    if Xref is None: #TODO this is all one point
-      Xref, Yref, Zref = [float(i) for i in line.split()]
-      continue
-    if CDp is None:
-      # try to read CD data which may or may not be present
-      try: CDp = float(line)
-      except ValueError: CDp = 0.0
-      continue
+    # TODO this goes at the end now line = infile.readline()
     # start of keyword-interpretation loop
-    keyword = line.upper()[0:4]
-    if keyword == "EOF": #XXX TODO FIXME clean this up
+    keyword = line.upper().split()[0][0:4]
+    if   keyword == 'EOF': #XXX TODO FIXME clean this up
       cleanup()
-    elif keyword == "SURF":
-      if iSurf != 0:
-        makesurf(ISURF, IBX,NSEC, NVC, CSPACE, NVS, SSPACE,
-         XYZSCAL,XYZTRAN,ADDINC, XYZLES,CHORDS,AINCS,SSPACES,NSPANS,
-         XASEC,SASEC,TASEC,NASEC, CLCDSEC,CLAF,
-         ICONX, ICONTD,NSCON,GAIND,XHINGED,VHINGED,REFLD,
-         IDESTD,NSDES,GAING )
-        if ldupl: sdupl(ISURF, YDUPL, 'YDUP') # XXX The fuck is this
-        iSurf = 0
-      if iBody != 0:
-        makebody(IBODY, IBX, NVB, BSPACE, XYZSCAL,XYZTRAN, XBOD,YBOD,TBOD,NBOD)
-        if ldupl: bdupl(IBODY,YDUPL,'YDUP') #TODO The fuck is this
-        iBody = 0
-#------ new surface  (ISURF.ne.0 denotes surface accumulation is active)
-      nSurf = nSurf + 1 # TODO: why does this have a max?
-      iSurf = nSurf if nSurf < nSmax else nSmax
-      lscomp[iSurf] = iSurf
-#------ default surface component index is just the surface number
-      lscomp[iSurf] = iSurf # LSCOMP(ISURF) = ISURF # XXX WTF
-#------ clear indices for accumulation
-      nsec = 0 # NSEC = 0
-      isec = 0 # ISEC = 0
-#------ set surface defaults
-      ldupl = False  #  LDUPL  = .FALSE.   
-      lhinge = False #  LHINGE = .FALSE.
-#------ assume this will be a conventional loaded surface
-      lfwake[iSurf] = True #  LFWAKE(ISURF) = .TRUE.
-      lfalbe[iSurf] = True #  LFALBE(ISURF) = .TRUE.
-      lfload[iSurf] = True #  LFLOAD(ISURF) = .TRUE.
-
-      xyzscal = [1.,1.,1.] #XYZSCAL(1)=1.0 XYZSCAL(2)=1.0 XYZSCAL(3)=1.0
-      xyztran = [0.,0.,0.] #XYZTRAN(1) = 0. XYZTRAN(2) = 0. XYZTRAN(3) = 0.
-      addinc = 0. # ADDINC = 0.
-      ncvar = 0 # NCVAR = 0
-      # XXX TODO move this to relevant section
-      # parse surface
-        CALL RDLINE(LUN,LINE,NLINE,ILINE)
-        STITLE(ISURF) = LINE(1:NLINE)
-        WRITE(*,*)
-        WRITE(*,*) '  Building surface: ', STITLE(ISURF)
-#
-        CALL RDLINE(LUN,LINE,NLINE,ILINE)
-        NINPUT = 4
-        CALL GETFLT(LINE,RINPUT,NINPUT,ERROR)
-        IF(ERROR .OR. NINPUT.LT.2) GO TO 990
-#
-        NVC = INT( RINPUT(1) + 0.001 )
-        CSPACE = RINPUT(2)
-#
-        IF(NINPUT.GE.4) THEN
-         NVS = INT( RINPUT(3) + 0.001 )
-         SSPACE = RINPUT(4)
-        ELSE
-         NVS = 0
-         SSPACE = 0.0
-        ENDIF
+    elif keyword == 'SURF':
+      name = getline()
+      l = getline().split()
+      Nchord, Cspace = int(l[0]),float(l[1])
+      if len(l) < 4: Nspan, Sspace = None, None
+      else: Nspan, Sspace = int(l[2]),float(l[3])
+      surf = Surface(name,Nchord,Cspace,Nspan,Sspace)
+      while(True): # loop over surface parameters
+        keyword = getline().upper().split()[0][0:4]
+        if   keyword == 'YDUP': surf.ydup = float(getline()) ; continue
+        elif keyword == 'COMP': surf.comp = int(getline()) ; continue
+        elif keyword == 'INDE': surf.comp = int(getline()) ; continue
+        elif keyword == 'SCAL':
+          surf.scale = [float(i) for i in getline()] ; continue
+        elif keyword == 'TRAN':
+          surf.trans = [float(i) for i in getline()] ; continue
+        elif keyword == 'ANGL': surf.angle = float(getline()) ; continue
+        elif keyword == 'NOWA': surf.wake = False ; continue
+        elif keyword == 'NOAL': surf.albe = False ; continue
+        elif keyword == 'NOLO': surf.load = False ; continue
+        elif keyword == 'SECT':
+          l = getline().split()
+          Xle = [float(i) for i in l[0:3]]
+          Chord, Ainc = float(l[3]),float(l[4])
+          if len(l) < 7: Nspan, Sspace = 0, 0.0
+          else: Nspan, Sspace = float(l[5]), float(l[6])
+          sect = Section(Xle,Chord,Ainc,Nspan,Sspace)
+          while(True):
+            keyword = getline().upper().split()[0][0:4]
+            if   keyword == 'NACA': sect
+# XXX done for the night here, need to add airfoil parsing
+          surf.sect.append(sect)
+      config.comp[surf.comp].append(surf)
+    elif keyword == 'BODY':
+      name = getline()
+      l = getline().split()
+      Nbody,Bspace = int(l[0]),float(l[1])
+      body = Body(name,Nbody,Bspace)
+      config.body.append(body)
+    line = infile.readline()
+  # end while(True)
 #
 #===========================================================================
       ELSEIF(KEYWD.EQ.'BODY') THEN
