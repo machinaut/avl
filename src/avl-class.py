@@ -2,6 +2,45 @@
 # avl-class.py - avl class definitions
 
 class Configuration:
+  """
+  Header data
+  - - - - - - 
+  The input file begins with the following information in the first 5 non-blank,
+  non-comment lines:
+
+  Abc...              | case title
+
+  #                   | comment line begins with "#" or "!"
+
+  0.0                 | Mach
+  1     0     0.0     | iYsym  iZsym  Zsym
+  4.0   0.4   0.1     | Sref   Cref   Bref
+  0.1   0.0   0.0     | Xref   Yref   Zref
+  0.020               | CDp  (optional)
+
+
+
+    Mach  = default freestream Mach number for Prandtl-Glauert correction
+
+    iYsym =  1  case is symmetric about Y=0    , (X-Z plane is a solid wall)
+          = -1  case is antisymmetric about Y=0, (X-Z plane is at const. Cp)
+          =  0  no Y-symmetry is assumed
+
+    iZsym =  1  case is symmetric about Z=Zsym    , (X-Y plane is a solid wall)
+          = -1  case is antisymmetric about Z=Zsym, (X-Y plane is at const. Cp)
+          =  0  no Z-symmetry is assumed (Zsym ignored)
+
+    Sref  = reference area  used to define all coefficients (CL, CD, Cm, etc)
+    Cref  = reference chord used to define pitching moment (Cm)
+    Bref  = reference span  used to define roll,yaw moments (Cl,Cn)
+
+    X,Y,Zref = default location about which moments and rotation rates are defined
+               (if doing trim calculations, XYZref must be the CG location,
+                which can be imposed with the MSET command described later)
+
+    CDp = default profile drag coefficient added to geometry, applied at XYZref
+           (assumed zero if this line is absent, for previous-version compatibility)
+  """
   def __init__(self,name):
     self.name     = name
     self.mach     = 0.0
@@ -13,9 +52,9 @@ class Configuration:
     self.bref     = 0.0
     self.xref     = [0.0, 0.0, 0.0]
     self.cdp      = 0.0
-    self.surface  = [] # list of surfaces
-    self.body     = [] # list of bodies
-    self.comp     = [] # list of components # TODO is this redundant with surf?
+    self.body     = [] # list of surfaces and bodies
+    self.comp     = {} # list of components # TODO is this redundant with surf?
+    self.control  = {} # list of control surfaces
   def __str__(self):
     return 'Configuration: ' + self.name
 
@@ -273,5 +312,250 @@ class Section:
   """
   def __init__(self,keyword):
     self.keyword  = keyword # (keyword) SECTION
+    self.le       = [0.0, 0.0, 0.0] # Xle Yle Zle
+    self.chord    = 0.0     # Chord
+    self.ainc     = 0.0     # Ainc
+    self.nspan    = None    # Nspan  [optional]
+    self.sspace   = None    # Sspace [optional]
   def __str__(self):
-    return 'Section: '
+    return 'Section'
+
+class Naca:
+  """
+  NACA                      |    (keyword)
+  4300                      | section NACA camberline
+
+  The NACA keyword sets the camber line to the NACA 4-digit shape specified
+  """
+  def __init__(self,keyword):
+    self.keyword  = keyword # (keyword) NACA
+    self.naca     = 0       # section NACA camberline
+  def __str__(self):
+    return 'Naca: %04d' % self.le
+
+class Airfoil:
+  """
+  AIRFOIL   X1  X2          |(keyword)   [ optional x/c range ]
+  1.0   0.0                 | x/c(1)  y/c(1)
+  0.98  0.002               | x/c(2)  y/c(2)
+   .     .                  |  .       .
+   .     .                  |  .       .
+   .     .                  |  .       .
+  1.0  -0.01                | x/c(N)  y/c(N)
+
+
+  The AIRFOIL keyword declares that the airfoil definition is input
+  as a set of x/c, y/c pairs.
+
+    x/c,y/c =  airfoil coordinates 
+
+  The x/c, y/c coordinates run from TE, to LE, back to the TE again 
+  in either direction.  These corrdinates are splined, and the slope 
+  of the camber y(x) function is obtained from the middle y/c values 
+  between top and bottom.  The number of points N is deterimined 
+  when a line without two readable numbers is encountered.
+
+  If present, the optional X1 X2 parameters indicate that only the 
+  x/c range X1..X2 from the coordinates is to be assigned to the surface.
+  If the surface is a 20%-chord flap, for example, then X1 X2
+  would be 0.80 1.00.  This allows the camber shape to be easily 
+  assigned to any number of surfaces in piecewise manner.
+  """
+  def __init__(self,keyword):
+    self.keyword  = keyword # (keyword) AIRFOIL
+    self.range    = [None, None] # [X1, X2] [optional]
+    self.xy       = []      # [(x/c,y/c),...]
+  def __str__(self):
+    return 'Airfoil'
+
+class Afile:
+  """
+  AFILE      X1  X2         | (keyword)   [ optional x/c range ]
+  filename                  | filename string
+
+  The AFILE keyword is essentially the same as AIRFOIL, except
+  that the x/c,y/c pairs are generated from a standard (XFOIL-type)
+  set of airfoil coordinates contained in the file "filename".  
+  The first line of this file is assumed to contain a string
+  with the name of the airfoil (as written out with XFOIL's SAVE
+  command).   If the path/filename has embedded blanks
+  double quotes should be used to delimit the string.
+
+  The optional X1 X2 parameters are used as in AIRFOIL.
+  """
+  def __init__(self,keyword):
+    self.keyword  = keyword # (keyword) AFILE
+    self.range    = [None, None] # [X1, X2] [optional]
+    self.filename = ''      # filename string
+  def __str__(self):
+    return 'Afile: ' + self.filename
+
+class Design:
+  """
+  DESIGN                  | (keyword)
+  DName  Wdes             | design parameter name,  local weight
+
+  This declares that the section angle Ainc is to be virtually 
+  perturbed by a design parameter, with name DName and local
+  Wdes.  
+
+  For example, declarations for design variables "twist1" and "bias1"
+
+  DESIGN
+  twist1  -0.5
+
+  DESIGN 
+  bias1   1.0
+
+  Give an effective (virtual) section incidence that is set using the "twist1" 
+  and "bias1" design variables as:
+
+    Ainc_total = Ainc  - 0.5*twist1_value + 1.0*bias_value
+
+  where twist1_value and bias1_value are design parameters specified at runtime.
+
+  The sensitivities of the flow solution to design variable changes
+  can be displayed at any time during program execution.  Hence,
+  design variables can be used to quickly investigate the effects
+  of twist changes on lift, moments, induced drag, etc.
+
+  Declaring the same design parameter with varying weights for multiple 
+  sections in a surface allows the design parameter to represent a convenient 
+  "design mode", such as linear washout, which influences all sections.
+  """
+  def __init__(self,keyword):
+    self.keyword  = keyword # (keyword) DESIGN
+    self.name     = ''      # DName
+    self.wdes     = 0.0     # Wdes
+  def __str__(self):
+    return 'Design: ' + self.name
+
+class Control:
+  """
+  CONTROL                              | (keyword)
+  elevator  1.0  0.6   0. 1. 0.   1.0  | name, gain,  Xhinge,  XYZhvec,  SgnDup
+
+
+
+  The CONTROL keyword declares that a hinge deflection at this section
+  is to be governed by one or more control variables.  An arbitrary
+  number of control variables can be used, limited only by the array
+  limit NDMAX.
+
+  The data line quantities are...
+
+   name     name of control variable
+   gain     control deflection gain, units:  degrees deflection / control variable
+   Xhinge   x/c location of hinge.  
+             If positive, control surface extent is Xhinge..1  (TE surface)
+             If negative, control surface extent is 0..-Xhinge (LE surface)
+   XYZhvec  vector giving hinge axis about which surface rotates 
+             + deflection is + rotation about hinge by righthand rule
+             Specifying XYZhvec = 0. 0. 0. puts the hinge vector along the hinge
+   SgnDup   sign of deflection for duplicated surface
+             An elevator would have SgnDup = +1
+             An aileron  would have SgnDup = -1
+  """
+  def __init__(self,keyword):
+    self.keyword  = keyword # (keyword) CONTROL
+    self.name     = ''      # name
+    self.gain     = 0.0     # gain
+    self.xhinge   = 0.0     # Xhinge
+    self.hvec     = [0.0, 0.0, 0.0] # XYZhvec
+    self.sgndup   = 0       # SgnDup
+  def __str__(self):
+    return 'Control: ' + self.name
+
+class Claf:
+  """
+  CLAF        |  (keyword)
+  CLaf        |  dCL/da scaling factor
+
+  This scales the effective dcl/da of the section airfoil as follows:
+   dcl/da  =  2 pi CLaf
+  The implementation is simply a chordwise shift of the control point
+  relative to the bound vortex on each vortex element.
+
+  The intent is to better represent the lift characteristics 
+  of thick airfoils, which typically have greater dcl/da values
+  than thin airfoils.  A good estimate for CLaf from 2D potential
+  flow theory is
+
+    CLaf  =  1 + 0.77 t/c
+
+  where t/c is the airfoil's thickness/chord ratio.  In practice,
+  viscous effects will reduce the 0.77 factor to something less.
+  Wind tunnel airfoil data or viscous airfoil calculations should
+  be consulted before choosing a suitable CLaf value.
+
+  If the CLAF keyword is absent for a section, CLaf defaults to 1.0, 
+  giving the usual thin-airfoil lift slope  dcl/da = 2 pi.  
+  """
+  def __init__(self,keyword):
+    self.keyword  = keyword # (keyword) CLAF
+    self.claf     = 0.0     # CLaf
+  def __str__(self):
+    return 'Claf: ' + str(self.claf)
+
+class Cdcl:
+  """
+  CDCL                         |  (keyword)
+  CL1 CD1  CL2 CD2  CL3 CD3    |  CD(CL) function parameters
+
+
+  The CDCL keyword specifies a simple profile-drag CD(CL) function 
+  for this section.  The function is parabolic between CL1..CL2 and 
+  CL2..CL3, with rapid increases in CD below CL1 and above CL3.
+  See the SUBROUTINE CDCL header (in cdcl.f) for more details.
+
+  The CD(CL) function is interpolated for stations in between
+  defining sections.  Hence, the CDCL declaration on any surface 
+  must be used either for all sections or for none.
+  """
+  def __init__(self,keyword):
+    self.keyword  = keyword # (keyword) CDCL
+    self.cdcl     = [(0.,0.),(0.,0.),(0.,0.)] # CL1 CD1  CL2 CD2  CL3 CD3
+  def __str__(self):
+    return 'Cdcl: ' + str(self.cdcl)
+
+class Body:
+  """
+  BODY                 | (keyword)
+  Fuselage             | body name string
+  15   1.0             | Nbody  Bspace
+
+  The BODY keyword declares that a body is being defined until
+  the next SURFACE or BODY keyword, or the end of file is reached.  
+  A body is modeled with a source+doublet line along its axis,
+  in accordance with slender-body theory.
+
+    Nbody  =  number of source-line nodes
+    Bspace =  lengthwise node spacing parameter (described later)
+  """
+  def __init__(self,keyword):
+    self.keyword  = keyword # (keyword) BODY
+    self.name     = ''      # body name string
+    self.nbody    = 0       # Nbody
+    self.bspace   = 0.0     # Bspace
+  def __str__(self):
+    return 'Body: ' + self.name
+
+class Bfile:
+  """
+  BFILE            |  (keyword)
+  filename         | filename string
+
+  This specifies the shape of the body as an "airfoil" file
+  which gives the top or side view of the body, which is
+  assumed to have a round cross-section.  Hence, the diameter
+  of the body is the difference between the top and bottom 
+  Y values.  Bodies which are not round must be approximated
+  with an equivalent round body which has roughly the same
+  cross-sectional areas. If the path/filename has embedded blanks
+  double quotes should be used to delimit the string.
+  """
+  def __init__(self,keyword):
+    self.keyword  = keyword # (keyword) BFILE
+    self.filename = ''      # filename string
+  def __str__(self):
+    return 'Bfile: ' + self.filename

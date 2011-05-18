@@ -32,14 +32,16 @@ tokens = [
     'COMMENT',
     'INT',
     'FLOAT',
-    'ID'
+    'ID',
+    'LINE',
+    'NEWLINE'
     ] + list(reserved.values())
 
 # Regular expression rules for simple tokens
 t_SPACE   = r'[ \t]+'
 
 def t_COMMENT(t):
-  r'(\#|\!).*'
+  r'((\#|\!).*\n)*'
   pass
   # No return value. Token discarded
 
@@ -61,8 +63,12 @@ def t_ID(t):
     t.type = 'ID'
   return t
 
+def t_LINE(t):
+  r'.+'
+  return t
+
 # Define a rule so we can track line numbers
-def t_newline(t):
+def t_NEWLINE(t):
   r'\n+'
   t.lexer.lineno += len(t.value)
 

@@ -25,7 +25,8 @@ surface = re.compile(r"""(?sx)        # re.VERBOSE and re.DOTALL
   """)
 body = re.compile(r"""(?sx)           # re.VERBOSE and re.DOTALL
   (?P<body>BODY\S*)               \s+ # keyword BODY
-  (?P<name>
+  (?P<name>[^\n]*)                \s+ # body name
+  (?P
   """ ) # XXX not done yet
 
 class Plane:
@@ -114,6 +115,8 @@ if __name__ == "__main__":
       surf.name = d['name']
       surf.nchord,surf.cspace,surf.nspan,surf.sspace = nchord,cspace,nspan,sspace
       p.surface.append(surf)
+      s = d['remainder']
+      continue
       
 
       # XXX - ended in line 262 of original ainput.f
