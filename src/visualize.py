@@ -81,8 +81,22 @@ class Naca:
     plt.show()
   def draw(self):
     """ draw airfoil with cairo """
+    import numpy as np
     import cairo
+    size=500
+    surface = cairo.ImageSurface (cairo.FORMAT_ARGB32, size,size)
+    ctx = cairo.Context (surface) # context
+    #ctx.scale (size, size) # Normalizing the canvas
+    ctx.set_source_rgb (0.7, 0.9, 0.8) # Solid color
+    ctx.fill() # background
+    x = np.arange(0.,1.001,0.001) # 1000 points along chord
+    for i in [self.upper(i) for i in x]: ctx.line_to(i[0]*.8+.1,i[1]*.8+.1)
+    ctx.set_source_rgb (0.3, 0.2, 0.5) # Solid color
+    ctx.set_line_width(0.01)
+    ctx.stroke() # draw line
+    surface.write_to_png ("example.png") # Output to PNG
 
 if __name__ == "__main__":
   naca = Naca()
-  naca.plot()
+  #naca.plot()
+  naca.draw()
