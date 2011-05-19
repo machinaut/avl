@@ -37,6 +37,7 @@ class Configuration:
     self.cdp        = cdp
     self.comp       = {None:[]} # None is a list of individual surfaces
     self.body       = []
+    #XXX - need to finish print strings so i can start testing
 
 class Surface:
   def __init__(self,name,nchord,cspace,nspan=None,sspace=None):
@@ -72,21 +73,31 @@ class Section:
 class Naca:
   def __init__(self,naca):
     self.naca       = naca
+  def __str__(self):
+    return 'Naca(naca='+str(self.naca)+')'
 class Airfoil:
   def __init__(self,start,end,xy):
     self.start      = start
     self.end        = end
     self.xy         = xy
+  def __str__(self):
+    return 'Airfoil(start='+str(self.start)+',end='+str(self.end)+\
+        ',xy='+str(self.xy)+')'
 class Afile:
   def __init__(self,start,end,filename):
     self.start      = start
     self.end        = end
     self.filename   = filename
+  def __str__(self):
+    return 'Afile(start='+str(self.start)+',end='+str(self.end)+\
+        ',filename="'+str(self.filename)+'")'
 
 class Design:
   def __init__(self,name,weight):
     self.name       = name
     self.weight     = weight
+  def __str__(self):
+    return 'Design(name="'+str(self.name)+',weight='+str(self.weight)+')'
 
 class Control:
   def __init__(self,name,gain,xhinge,hvec,sgndup):
@@ -95,6 +106,10 @@ class Control:
     self.xhinge     = xhinge
     self.hvec       = hvec
     self.sgndup     = sgndup
+  def __str__(self):
+    return 'Control(name="'+str(self.name)+'",gain='+str(self.gain)+\
+        ',xhinge='+str(self.xhinge)+',hvec='+str(self.hvec)+\
+        ',sgndup='+str(self.sgndup)+')'
 
 class Body:
   def __init__(self,name,nbody,bspace):
@@ -105,6 +120,11 @@ class Body:
     self.scale      = [1.0, 1.0, 1.0]
     self.trans      = [0.0, 0.0, 0.0]
     self.bfile      = None
+  def __str__(self):
+    return 'Body(name="'+str(self.name)+'",nbody='+str(self.nbody)+\
+        ',bspace='+str(self.bspace)+',ydup='+str(self.ydup)+\
+        ',scale='+str(self.scale)+',trans='+str(self.trans)+\
+        ',bfile="'+str(self.bfile)+'")'
 
 def read_infile(lun,infilename,ferr): # TODO the fuck is lun or ferr?
   ''' Parse an AVL configuration input file '''
