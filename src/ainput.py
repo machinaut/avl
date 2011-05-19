@@ -37,7 +37,9 @@ class Configuration:
     self.cdp        = cdp
     self.comp       = {None:[]} # None is a list of individual surfaces
     self.body       = []
-    #XXX - need to finish print strings so i can start testing
+  def __str__(self):
+    return 'Configuration(name="'+str(self.name)+'",mach='+str(self.mach)+\
+        ',iysym='+str(self.iysym)+',izsym='
 
 class Surface:
   def __init__(self,name,nchord,cspace,nspan=None,sspace=None):
@@ -55,6 +57,8 @@ class Surface:
     self.albe       = True
     self.load       = True
     self.sect       = []
+  def make(self):
+    
 
 class Section:
   def __init__(self,xle,chord,ainc,nspan=None,sspace=None):
@@ -126,7 +130,7 @@ class Body:
         ',scale='+str(self.scale)+',trans='+str(self.trans)+\
         ',bfile="'+str(self.bfile)+'")'
 
-def read_infile(lun,infilename,ferr): # TODO the fuck is lun or ferr?
+def read_infile(infilename):
   ''' Parse an AVL configuration input file '''
   print 'Reading file:', infilename
   infile = open(infilename).read()
@@ -158,9 +162,7 @@ def read_infile(lun,infilename,ferr): # TODO the fuck is lun or ferr?
   while(True): # you spin me right round baby right round
     # start of keyword-interpretation loop
     keyword = getline().upper().split()[0][0:4]
-    if   keyword == 'EOF': #XXX TODO FIXME clean this up
-      pass #cleanup()
-    elif keyword == 'SURF':
+    if   keyword == 'SURF':
       name = getline()
       print 'Surface:', name
       l = getline().split()
