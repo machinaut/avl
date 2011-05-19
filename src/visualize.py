@@ -17,8 +17,9 @@ class Naca:
   """ Class for NACA airfoils """
   # Reference: http://en.wikipedia.org/wiki/NACA_airfoil
   # Reference: http://people.clarkson.edu/~pmarzocc/AE429/The%20NACA%20airfoil%20series.pdf
-  def __init__(self,naca=4412):     # intelligent
+  def __init__(self,naca=2415):     # intelligent
     self.naca = '%04d' % int(naca)  # convert to a string
+    naca   = self.naca
     self.t = float(naca[3:])/100.0  # maximum thickness as ratio of chord
     self.m = float(naca[0])/100.0   # maximum camber as a ratio of chord
     self.p = float(naca[1])/10.0    # location of maximum camber along chord
@@ -45,6 +46,7 @@ class Naca:
     """ calculate the upper surface x- and y-coordinates given x along chord """
     t     = self.thick(x)
     theta = self.theta(x)
+    y     = self.mean(x)
     xu    = x - t * math.sin(theta)
     yu    = y + t * math.cos(theta)
     return (xu,yu)
@@ -54,6 +56,7 @@ class Naca:
     """ calculate the lower surface x- and y-coordinates given x along chord """
     t     = self.thick(x)
     theta = self.theta(x)
+    y     = self.mean(x)
     xl    = x + t * math.sin(theta)
     yl    = y - t * math.cos(theta)
     return (xl,yl)
@@ -65,16 +68,21 @@ class Naca:
     import matplotlib.pyplot as plt
     # points along the chord
     x   = np.arange(0.,1.001,0.001) # 1000 points along chord
-    y   = [self.mean(x)   for i in x]
+    y   = [self.mean(i)   for i in x]
     xu  = [self.upperx(i) for i in x]
     yu  = [self.uppery(i) for i in x]
     xl  = [self.lowerx(i) for i in x]
-    yl  = [self.lowerx(i) for i in x]
-    plt.plot(x,y,xu,yu,xl,yl)
+    yl  = [self.lowery(i) for i in x]
+    plt.plot(x,y)
+    plt.plot(xu,yu)
+    plt.plot(xl,yl)
+    plt.xlim((-0.1,1.1))
+    plt.ylim((-0.1,0.1))
+    plt.show()
   def draw(self):
     """ draw airfoil with cairo """
     import cairo
 
 if __name__ == "__main__":
-  naca = Naca(4412)
+  naca = Naca()
   naca.plot()
