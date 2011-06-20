@@ -1,8 +1,8 @@
 /***********************************************************************
     Module:  avl.f
- 
+
     Copyright (C) 2002 Mark Drela, Harold Youngren
- 
+
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
     the Free Software Foundation; either version 2 of the License, or
@@ -23,17 +23,23 @@ package main // TODO avl
      See file avl_doc.txt for user guide.
      See file version_notes.txt for most recent changes.
 ***********************************************************************/
-import ( 
+import (
     "fmt"
 )
+// avl.inc.go
+// avlplt.inc.go
 
 var (
-version = 3.333
+    error   bool
+    command string
+    comarg  string
+    fnnew   string
+    Version = 3.333
 )
 
 func Preamble() {
     fmt.Println(" ===================================================")
-    fmt.Println("  Athena Vortex Lattice  Program       Version ", Version)
+    fmt.Println("  Athena Vortex Lattice  Program       Version", Version)
     fmt.Println("  Copyright (C) 2002   Mark Drela, Harold Youngren")
     fmt.Println("  This software comes with ABSOLUTELY NO WARRANTY,")
     fmt.Println("    subject to the GNU General Public License.")
@@ -44,4 +50,3 @@ func Preamble() {
 func main() {
     Preamble()
 }
-
