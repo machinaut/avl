@@ -85,6 +85,8 @@ class Naca:
   def draw(self):
     """ draw airfoil with cairo """
     # TODO separate the computation from the drawing
+    # TODO make func's to generate paths
+    # TODO make func's to generate lists of points (for paths)
     import numpy as np
     import cairo, cStringIO
     from pyglet import window, image
@@ -94,8 +96,8 @@ class Naca:
     # cairo
     surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, size,size/5)
     ctx = cairo.Context(surface) # context
-    ctx.scale(size,size)
-    ctx.translate(.1,.1)
+    ctx.scale(size,-size)
+    ctx.translate(.1,-.1)
     #ctx.translate(size/2, size/2) # Normalizing the canvas
     # wait for trapclose
     while not win.has_exit:
@@ -106,12 +108,12 @@ class Naca:
       ctx.set_source_rgb (0.3, 0.2, 0.5) # Solid color
       # DRAW THE ACTUAL AIRFOIL
       x = np.arange(0.,1.001,0.001) # 1000 points along chord
-      for i in [self.upper(i) for i in x]: ctx.line_to(i[0]*.8,i[1]*-.8)
-      for i in [self.lower(i) for i in x[::-1]]: ctx.line_to(i[0]*.8,i[1]*-.8)
+      for i in [self.upper(i) for i in x]: ctx.line_to(i[0]*.8,i[1]*.8)
+      for i in [self.lower(i) for i in x[::-1]]: ctx.line_to(i[0]*.8,i[1]*.8)
       ctx.close_path()
       ctx.stroke() # draw line
-      for i in [(i,self.mean(i)) for i in x]: ctx.line_to(i[0]*.8,i[1]*-.8)
-      for i in [(i,self.mean(i)) for i in x[::-1]]: ctx.line_to(i[0]*.8,i[1]*-.8)
+      for i in [(i,self.mean(i)) for i in x]: ctx.line_to(i[0]*.8,i[1]*.8)
+      for i in [(i,self.mean(i)) for i in x[::-1]]: ctx.line_to(i[0]*.8,i[1]*.8)
       ctx.close_path()
       ctx.stroke() # draw line
       # make a fake file and draw to it
@@ -124,9 +126,21 @@ class Naca:
       win.clear()
       pic.blit(0, 0)
       win.flip()
+  def gtkgui(self):
+    """ Simple interactive GTK graphical user interface """
+    import pygtk
+    pygtk.require('2.0')
+    import gtk
+    class Base:
+      def __init__(self):
+        self.window = gtk.Window(gtk.WINDOW_TOPLEVEL)
+        self.window.show()
+      def main(self):
+        gtk.main()
 
 
 if __name__ == "__main__":
   naca = Naca()
   #naca.plot()
-  naca.draw()
+  #naca.draw()
+  naca.gtkgui()
