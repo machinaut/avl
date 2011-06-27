@@ -1,0 +1,22 @@
+include $(GOROOT)/src/Make.inc
+
+<<<<<<< HEAD
+TARG=visualize
+GOFILES=visualize.go
+
+all: gofmt visualize
+
+gofmt:
+	gofmt -spaces -tabindent=false -tabwidth=4 -w visualize.go 
+=======
+TARG=avl
+GOFILES=avl.go avlinc.go
+
+all: gofmt avl
+
+gofmt:
+	gofmt -spaces -tabindent=false -tabwidth=4 -w avl.go
+	gofmt -spaces -tabindent=false -tabwidth=4 -w avlinc.go
+>>>>>>> 10c2c355c15229179e77f5d40cc4b7b7ce17fd60
+
+include $(GOROOT)/src/Make.cmd
