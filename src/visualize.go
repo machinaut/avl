@@ -5,8 +5,15 @@ package main
 
 import (
     "fmt"
+    "math"
 )
+
+type Airfoil struct {
+
+}
 
 func main() {
     fmt.Println("Hello, World")
+    n := Naca{.02, .4, .12} // Cessna 2412 airfoil
+    fmt.Println(n)
 }
